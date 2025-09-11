@@ -1,11 +1,16 @@
-# Search Engine with Web Analytics - project template
-# IRWA Final Project
+# Information Retrieval and Web Analytics (IRWA) - Final Project template
 
-<img src="static/image.png" alt="Project Logo" width="200"/>
-
-This repository contains the template code for the IRWA Final Project - Search Engine with Web Analytics.
-The project is implemented using Python and Flask web framework.
-It includes a simple web application that allows users to search through a collection of documents and view analytics about their searches.
+<table>
+  <tr>
+    <td style="vertical-align: top;">
+      <img src="static/image.png" alt="Project Logo"/>
+    </td>
+    <td style="vertical-align: top;">
+      This repository contains the template code for the IRWA Final Project - Search Engine with Web Analytics.
+      The project is implemented using Python and the Flask web framework. It includes a simple web application that allows users to search through a collection of documents and view analytics about their searches.
+    </td>
+  </tr>
+</table>
 
 ----
 ## Project Structure
@@ -15,6 +20,11 @@ It includes a simple web application that allows users to search through a colle
 ├── myapp                # Contains the main application logic
 ├── templates            # Contains HTML templates for the Flask application
 ├── static               # Contains static assets (images, CSS, JavaScript)
+├── data                 # Contains the dataset file (fashion_products_dataset.json)
+├── project_progress     # Contains your solutions for Parts 1, 2, and 3 of the project
+├── .env                 # Environment variables for configuration (e.g., API keys)
+├── .gitignore           # Specifies files and directories to be ignored by Git
+├── LICENSE              # License information for the project
 ├── requirements.txt     # Lists Python package dependencies
 ├── web_app.py           # Main Flask application
 └── README.md            # Project documentation and usage instructions
@@ -27,7 +37,7 @@ It includes a simple web application that allows users to search through a colle
 Open a terminal console and execute:
 ```
 cd <your preferred projects root directory>
-git clone https://github.com/irwa-labs/search-engine-web-app.git
+git clone https://github.com/trokhymovych/irwa-search-engine.git
 ```
 
 ## Setting up the Python environment (only for the first time you run the project)
@@ -114,6 +124,13 @@ git add . && git commit -m "initial commit"
 git remote add origin <your GitHub repo URL from the browser>
 git push -u origin main
 ```
+
+## Usage: 
+0. Put the data file `fashion_products_dataset.json` in the `data` folder. It will be provided to you by the instructor.
+1. As for Parts 1, 2, and 3 of the project, please use the `project_progress` folder to store your solutions. Each part should contain `.pdf` file with your report and `.ipynb` (Jupyter Notebook) file with your code for solution.
+2. For the Part 4, of the project, you should build a web application using Flask that allows users to search through a collection of documents and view analytics about their searches. You should work mailnly in the `web_app.py` file `myapp` and `templates` folders. Feel free to change any code or add new files as needed. The provided code is just a starting point to help you get started quickly.
+3. Make sure to update the `.env` file with your Groq API key and any other necessary configurations. IMPORTANT: Do not share your `.env` file publicly as it contains sensitive information. It is included in `.gitignore` to prevent accidental commits. (It should never be included in the repos and appear here only for demonstration purposes).
+4. Have fun and be creative!
 
 ## Attribution:
 The project is adapted from the following sources:
