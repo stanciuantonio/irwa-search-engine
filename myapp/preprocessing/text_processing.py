@@ -1,8 +1,13 @@
 """
 Text preprocessing functions for document corpus.
 Migrated from Part 1 notebook - maintains exact same logic.
+
+Changes for Part 2:
+- Added PID at root level in preprocess_document() for efficient indexing
+- Added load_preprocessed_corpus() helper to convert list to dict
 """
 
+import pickle
 import nltk
 from nltk.stem import PorterStemmer
 from nltk.corpus import stopwords
@@ -53,6 +58,13 @@ def preprocess_document(document):
     1. Build the tokens of the document
     2. Build the metadata tokens of the document
     3. Build the original attributes of the document
+
+    Returns:
+        dict: Preprocessed document with structure:
+            - pid: str - document identifier (for efficient indexing in Part 2)
+            - searchable_text: list[str] - tokenized, stemmed text
+            - metadata: dict - category, brand, seller, sub_category
+            - original: dict - all original document fields
     """
 
     # 1. Searchable tokens
@@ -84,7 +96,40 @@ def preprocess_document(document):
         "url": document["url"]
     }
     return {
+        "pid": document["pid"],  # PID at root level for O(1) access during indexing
         "searchable_text": tokens,
         "metadata": metadata,
         "original": original
     }
+
+
+def load_preprocessed_corpus(cache_path='data/processed/preprocessed_corpus.pkl'):
+    """
+    Load preprocessed corpus from cache and convert to dict indexed by PID.
+
+    This function is essential for Part 2 (Indexing) as it provides O(1) access
+    to documents by their PID, which is needed when building the inverted index
+    and retrieving documents for ranking.
+
+    Args:
+        cache_path: Path to preprocessed corpus pickle file
+
+    Returns:
+        dict: {pid: preprocessed_doc} for efficient document access
+
+    Example:
+        >>> corpus = load_preprocessed_corpus()
+        >>> doc = corpus['TKPFCZ9EA7H5FYZH']  # O(1) access by PID
+        >>> print(doc['searchable_text'][:5])
+    """
+    with open(cache_path, 'rb') as f:
+        corpus_list = pickle.load(f)
+
+    # Convert list to dict indexed by PID for O(1) access
+    corpus_dict = {}
+    for doc in corpus_list:
+        # Handle both old format (pid in original) and new format (pid at root)
+        pid = doc.get('pid') or doc['original']['pid']
+        corpus_dict[pid] = doc
+
+    return corpus_dict
