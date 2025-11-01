@@ -133,3 +133,28 @@ def load_preprocessed_corpus(cache_path='data/processed/preprocessed_corpus.pkl'
         corpus_dict[pid] = doc
 
     return corpus_dict
+
+def build_query_terms(query):
+    """
+    Preprocess the query text removing stop words, stemming,
+    transforming in lowercase and return the tokens of the text.
+
+    Argument:
+    query -- a string representing the user query
+
+    Returns:
+    tokens - a list of tokens corresponding to the input query after the preprocessing
+    """
+    # 1. Stemmer and stop words
+    stemmer = PorterStemmer()
+    stop_words = set(stopwords.words('english'))
+
+    # 2. Text
+    text = query.lower()
+    text = ''.join(char if char.isalnum() or char.isspace() else ' ' for char in text)
+    text = text.split(" ")
+    text = [term for term in text if term not in stop_words]
+    text = [term for term in text if term != '']
+    text = [stemmer.stem(term) for term in text]
+
+    return text
