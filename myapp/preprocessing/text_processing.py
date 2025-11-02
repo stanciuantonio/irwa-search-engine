@@ -102,38 +102,6 @@ def preprocess_document(document):
         "original": original
     }
 
-
-def load_preprocessed_corpus(cache_path='data/processed/preprocessed_corpus.pkl'):
-    """
-    Load preprocessed corpus from cache and convert to dict indexed by PID.
-
-    This function is essential for Part 2 (Indexing) as it provides O(1) access
-    to documents by their PID, which is needed when building the inverted index
-    and retrieving documents for ranking.
-
-    Args:
-        cache_path: Path to preprocessed corpus pickle file
-
-    Returns:
-        dict: {pid: preprocessed_doc} for efficient document access
-
-    Example:
-        >>> corpus = load_preprocessed_corpus()
-        >>> doc = corpus['TKPFCZ9EA7H5FYZH']  # O(1) access by PID
-        >>> print(doc['searchable_text'][:5])
-    """
-    with open(cache_path, 'rb') as f:
-        corpus_list = pickle.load(f)
-
-    # Convert list to dict indexed by PID for O(1) access
-    corpus_dict = {}
-    for doc in corpus_list:
-        # Handle both old format (pid in original) and new format (pid at root)
-        pid = doc.get('pid') or doc['original']['pid']
-        corpus_dict[pid] = doc
-
-    return corpus_dict
-
 def build_query_terms(query):
     """
     Preprocess the query text removing stop words, stemming,
