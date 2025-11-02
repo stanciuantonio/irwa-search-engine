@@ -9,8 +9,7 @@ Implementation of inverted index, TF-IDF ranking, and evaluation metrics for fas
 ### Prerequisites
 
 ```bash
-pip install -r ../../requirements.txt
-python -m nltk.downloader stopwords punkt
+pip install -r requirements.txt
 ```
 
 ### Execute Notebook
