@@ -1,17 +1,21 @@
 import math
 import time
 from collections import defaultdict
+
 from myapp.preprocessing.text_processing import build_query_terms
 
 class InvertedIndex:
     """
-    Inverted index implementation based on part_2.ipynb approach.
-    Uses term_index for numerical IDs and stores doc indices in sets.
+    Inverted index + TF-IDF document vectors.
+
+    - Builds postings lists (term -> documents)
+    - Computes IDF per term
+    - Precomputes normalized TF-IDF vectors for each document
     """
 
     def __init__(self, corpus):
         """
-        Build inverted index from preprocessed corpus
+        Build inverted index and TF-IDF document vectors from preprocessed corpus.
 
         Args:
             corpus: dict {pid: preprocessed_doc}
@@ -20,36 +24,66 @@ class InvertedIndex:
         self.pid_list = list(corpus.keys())  # To convert doc_idx ↔ pid
         self.pid_to_idx = {pid: idx for idx, pid in enumerate(self.pid_list)}
 
-        # Extract vocabulary from corpus
-        all_tokens = []
-        for doc in corpus.values():
-            all_tokens.extend(doc['searchable_text'])
-        vocabulary = set(all_tokens)
-
-        # Create term_index: {term: term_id}
-        self.term_index = {term: i for i, term in enumerate(vocabulary)}
-
-        # Build inverted index: {term_id: set(doc_indices)}
-        self.index = defaultdict(set)
-
         start_time = time.time()
-        for doc_idx, pid in enumerate(self.pid_list):
-            doc = corpus[pid]
-            tokens = doc['searchable_text']
 
-            # Add document index to each term's posting list
+        # Core structures
+        self.term_index = {}  # term -> term_id
+        self.index = defaultdict(set)  # term_id -> {doc_idx}
+        self.doc_tf = {}  # doc_idx -> {term_id: tf}
+        self.idf = {}  # term_id -> idf
+        self.doc_tfidf = {}  # doc_idx -> {term_id: weight}
+        self.doc_norms = {}  # doc_idx -> ||d||
+
+        # 1) Assign term IDs and count term frequencies per document
+        for doc_idx, pid in enumerate(self.pid_list):
+            tokens = corpus[pid]["searchable_text"]
+            term_counts = defaultdict(int)
+
             for term in tokens:
+                if term not in self.term_index:
+                    self.term_index[term] = len(self.term_index)
                 term_id = self.term_index[term]
+                term_counts[term_id] += 1
+
+            self.doc_tf[doc_idx] = term_counts
+
+        self.total_docs = len(self.pid_list)
+
+        # 2) Build postings and document frequencies
+        df_counts = defaultdict(int)
+        for doc_idx, term_counts in self.doc_tf.items():
+            for term_id in term_counts.keys():
                 self.index[term_id].add(doc_idx)
 
-        self.build_time = time.time() - start_time
-        self.total_docs = len(corpus)
+        for term_id, posting in self.index.items():
+            df_counts[term_id] = len(posting)
 
-        print(f"Indexed {len(self.term_index)} unique terms from {self.total_docs} documents in {self.build_time:.2f}s")
+        # 3) Compute IDF for each term
+        for term_id, df in df_counts.items():
+            self.idf[term_id] = math.log(self.total_docs / df) if df > 0 else 0.0
+
+        # 4) Precompute TF-IDF vectors and norms for each document
+        for doc_idx, term_counts in self.doc_tf.items():
+            vec = {}
+            norm_sq = 0.0
+            for term_id, tf in term_counts.items():
+                weight = tf * self.idf[term_id]
+                vec[term_id] = weight
+                norm_sq += weight * weight
+
+            self.doc_tfidf[doc_idx] = vec
+            self.doc_norms[doc_idx] = math.sqrt(norm_sq) if norm_sq > 0 else 0.0
+
+        self.build_time = time.time() - start_time
+
+        print(
+            f"Indexed {len(self.term_index)} unique terms from "
+            f"{self.total_docs} documents in {self.build_time:.2f}s"
+        )
 
     def get_docs_with_term(self, term):
         """
-        Return set of document indices containing the term
+        Return set of document indices containing the term.
 
         Args:
             term: string term (not term_id)
@@ -64,7 +98,7 @@ class InvertedIndex:
 
     def search_conjunctive(self, query_terms):
         """
-        Conjunctive search (AND): find docs containing ALL query terms
+        Conjunctive search (AND): find docs containing ALL query terms.
 
         Args:
             query_terms: list of preprocessed query tokens
@@ -90,34 +124,60 @@ class InvertedIndex:
 
 
 class TFIDFRanker:
-    """TF-IDF ranking algorithm"""
+    """
+    TF-IDF ranking algorithm using cosine similarity between
+    query and document TF-IDF vectors.
+    """
 
-    def __init__(self, inverted_index):
+    def __init__(self, inverted_index: InvertedIndex):
         self.index = inverted_index
         self.corpus = inverted_index.corpus
         self.pid_list = inverted_index.pid_list
         self.total_docs = inverted_index.total_docs
 
-    def calculate_tf(self, term, doc_tokens):
-        """Term Frequency: count of term in document"""
-        return doc_tokens.count(term)
+    def _build_query_vector(self, query_terms):
+        """
+        Build TF-IDF vector for the query and compute its norm.
+        """
+        term_counts = defaultdict(int)
+        for term in query_terms:
+            term_id = self.index.term_index.get(term)
+            if term_id is not None:
+                term_counts[term_id] += 1
 
-    def calculate_idf(self, term):
-        """Inverse Document Frequency"""
-        docs_with_term = len(self.index.get_docs_with_term(term))
-        if docs_with_term == 0:
-            return 0
-        return math.log(self.total_docs / docs_with_term)
+        if not term_counts:
+            return {}, 0.0
 
-    def calculate_tfidf(self, term, doc_tokens):
-        """TF-IDF score for a term in a document"""
-        tf = self.calculate_tf(term, doc_tokens)
-        idf = self.calculate_idf(term)
-        return tf * idf
+        vec = {}
+        norm_sq = 0.0
+        for term_id, tf in term_counts.items():
+            idf = self.index.idf.get(term_id, 0.0)
+            weight = tf * idf
+            vec[term_id] = weight
+            norm_sq += weight * weight
+
+        norm = math.sqrt(norm_sq) if norm_sq > 0 else 0.0
+        return vec, norm
+
+    @staticmethod
+    def _cosine_similarity(q_vec, q_norm, d_vec, d_norm):
+        """
+        Compute cosine similarity between query and document vectors.
+        """
+        if q_norm == 0 or d_norm == 0:
+            return 0.0
+
+        dot = 0.0
+        for term_id, q_weight in q_vec.items():
+            d_weight = d_vec.get(term_id)
+            if d_weight is not None:
+                dot += q_weight * d_weight
+
+        return dot / (q_norm * d_norm)
 
     def rank_documents(self, query_terms, candidate_doc_indices):
         """
-        Rank documents by TF-IDF score
+        Rank documents by TF-IDF cosine similarity.
 
         Args:
             query_terms: list of preprocessed query tokens
@@ -126,19 +186,18 @@ class TFIDFRanker:
         Returns:
             list of (pid, score) tuples sorted by score descending
         """
+        q_vec, q_norm = self._build_query_vector(query_terms)
+        if not q_vec:
+            return []
+
         scores = []
 
         for doc_idx in candidate_doc_indices:
             pid = self.pid_list[doc_idx]
-            doc = self.corpus[pid]
-            doc_tokens = doc['searchable_text']
-
-            # Calculate TF-IDF score for this document
-            doc_score = 0
-            for term in query_terms:
-                doc_score += self.calculate_tfidf(term, doc_tokens)
-
-            scores.append((pid, doc_score))
+            d_vec = self.index.doc_tfidf[doc_idx]
+            d_norm = self.index.doc_norms[doc_idx]
+            score = self._cosine_similarity(q_vec, q_norm, d_vec, d_norm)
+            scores.append((pid, score))
 
         # Sort by score descending
         scores.sort(key=lambda x: x[1], reverse=True)
