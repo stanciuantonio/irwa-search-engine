@@ -3,6 +3,8 @@ import numpy as np
 
 from myapp.search.objects import Document
 
+from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker, CustomScoreRanker, Word2VecRanker
+from myapp.preprocessing.text_processing import build_query_terms
 
 def dummy_search(corpus: dict, search_id, num_results=20):
     """
@@ -34,3 +36,49 @@ class SearchEngine:
 
         # results = search_in_corpus(search_query)
         return results
+
+    def search_tfidf(self,query, corpus, top_k=20):
+        """
+        Search documents using conjunctive query (AND) and TF-IDF ranking
+
+        This function implements the complete pipeline:
+        1. Preprocess query
+        2. Build inverted index
+        3. Find documents with ALL query terms (conjunctive/AND)
+        4. Rank results by TF-IDF
+
+        Args:
+            query: string query from user
+            corpus: preprocessed corpus dict (if None, loads from cache)
+            top_k: number of results to return
+
+        Returns:
+            list of (pid, score) tuples
+        """
+
+        # Preprocess query
+        query_terms = build_query_terms(query)
+        print(f"Processed query terms: {query_terms}")
+
+        if not query_terms:
+            return []
+
+        # Build inverted index
+        inv_index = InvertedIndex(corpus)
+
+        # Find documents containing ALL query terms (AND/conjunctive)
+        candidate_doc_indices = inv_index.search_conjunctive(query_terms)
+
+        # If no documents match all terms, return empty
+        if not candidate_doc_indices:
+            print("No documents found matching all query terms")
+            return []
+
+        print(f"Found {len(candidate_doc_indices)} documents matching all terms")
+
+        # Rank candidates using TF-IDF + cosine similarity
+        ranker = TFIDFRanker(inv_index)
+        ranked_results = ranker.rank_documents(query_terms, candidate_doc_indices)
+
+        # Return top K results
+        return ranked_results[:top_k]
