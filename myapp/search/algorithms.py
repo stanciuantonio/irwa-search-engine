@@ -33,6 +33,10 @@ class InvertedIndex:
         self.idf = {}  # term_id -> idf
         self.doc_tfidf = {}  # doc_idx -> {term_id: weight}
         self.doc_norms = {}  # doc_idx -> ||d||
+        # For BM25
+        self.doc_lengths = {}  # doc_idx -> length
+        total_length = 0
+        self.avg_doc_length = 0  # average document length
 
         # 1) Assign term IDs and count term frequencies per document
         for doc_idx, pid in enumerate(self.pid_list):
@@ -47,7 +51,13 @@ class InvertedIndex:
 
             self.doc_tf[doc_idx] = term_counts
 
+            # For BM25
+            doc_len = len(tokens)
+            self.doc_lengths[doc_idx] = doc_len
+            total_length += doc_len
+
         self.total_docs = len(self.pid_list)
+        self.avg_doc_length = total_length / self.total_docs if self.total_docs > 0 else 0
 
         # 2) Build postings and document frequencies
         df_counts = defaultdict(int)
@@ -203,3 +213,75 @@ class TFIDFRanker:
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores
 
+class BM25Ranker:
+    """
+    BM25 ranking algorithm.
+
+    Uses:
+    - term frequencies from InvertedIndex.doc_tf
+    - IDF from InvertedIndex.idf
+    - document lengths and average length
+    """
+
+    def __init__(self, inverted_index: InvertedIndex, k1: float = 1.5, b: float = 0.75):
+        self.index = inverted_index
+        self.corpus = inverted_index.corpus
+        self.pid_list = inverted_index.pid_list
+        self.total_docs = inverted_index.total_docs
+        self.k1 = k1
+        self.b = b
+        self.doc_lengths = inverted_index.doc_lengths
+        self.avg_doc_length = inverted_index.avg_doc_length
+        self.idf = inverted_index.idf
+
+    def score_doc(self, query_terms, doc_idx: int) -> float:
+        """
+        Compute BM25 score for a single document and query.
+        """
+        score = 0.0
+        doc_len = self.doc_lengths.get(doc_idx, 0)
+        if doc_len == 0 or self.avg_doc_length == 0:
+            return 0.0
+
+        term_freqs = self.index.doc_tf[doc_idx]
+
+        for term in query_terms:
+            term_id = self.index.term_index.get(term)
+            if term_id is None:
+                continue
+
+            tf = term_freqs.get(term_id, 0)
+            if tf == 0:
+                continue
+
+            idf = self.idf.get(term_id, 0.0)
+
+            # BM25 core formula
+            numerator = tf * (self.k1 + 1.0)
+            denominator = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_length))
+            score += idf * (numerator / denominator)
+
+        return score
+
+    def rank_documents(self, query_terms, candidate_doc_indices):
+        """
+        Rank documents by BM25 score.
+
+        Args:
+            query_terms: list of preprocessed query tokens
+            candidate_doc_indices: set of document indices (AND semantics)
+
+        Returns:
+            list of (pid, score) tuples sorted by score descending
+        """
+        if not candidate_doc_indices:
+            return []
+
+        scores = []
+        for doc_idx in candidate_doc_indices:
+            pid = self.pid_list[doc_idx]
+            score = self.score_doc(query_terms, doc_idx)
+            scores.append((pid, score))
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores

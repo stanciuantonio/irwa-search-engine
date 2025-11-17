@@ -3,7 +3,7 @@ import numpy as np
 
 from myapp.search.objects import Document
 
-from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker, CustomScoreRanker, Word2VecRanker
+from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker
 from myapp.preprocessing.text_processing import build_query_terms
 
 def dummy_search(corpus: dict, search_id, num_results=20):
@@ -37,7 +37,7 @@ class SearchEngine:
         # results = search_in_corpus(search_query)
         return results
 
-    def search_tfidf(self,query, corpus, top_k=20):
+    def search_tfidf(self,query, corpus, top_k: int):
         """
         Search documents using conjunctive query (AND) and TF-IDF ranking
 
@@ -81,4 +81,27 @@ class SearchEngine:
         ranked_results = ranker.rank_documents(query_terms, candidate_doc_indices)
 
         # Return top K results
+        return ranked_results[:top_k]
+
+    def search_bm25(self, query, corpus, top_k: int):
+        """
+        Search documents using conjunctive query (AND) and BM25 ranking.
+        """
+        query_terms = build_query_terms(query)
+        print(f"Processed query terms (BM25): {query_terms}")
+
+        if not query_terms:
+            return []
+
+        inv_index = InvertedIndex(corpus)
+        candidate_doc_indices = inv_index.search_conjunctive(query_terms)
+
+        if not candidate_doc_indices:
+            print("No documents found matching all query terms (BM25)")
+            return []
+
+        print(f"Found {len(candidate_doc_indices)} documents matching all terms (BM25)")
+
+        ranker = BM25Ranker(inv_index)
+        ranked_results = ranker.rank_documents(query_terms, candidate_doc_indices)
         return ranked_results[:top_k]
