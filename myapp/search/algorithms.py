@@ -3,6 +3,7 @@ import time
 from collections import defaultdict
 
 from myapp.preprocessing.text_processing import build_query_terms
+from myapp.core.scoring_utils import rating_norm, discount_norm
 
 class InvertedIndex:
     """
@@ -281,6 +282,86 @@ class BM25Ranker:
         for doc_idx in candidate_doc_indices:
             pid = self.pid_list[doc_idx]
             score = self.score_doc(query_terms, doc_idx)
+            scores.append((pid, score))
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
+
+class CustomScoreRanker:
+    """
+    Custom ranking function that combines a textual BM25 score with
+    product-level signals: rating, discount, and stock availability.
+
+    your_score = alpha * bm25_score + beta  * rating_norm + gamma * discount_norm - delta * out_of_stock_penalty
+    """
+
+    def __init__(
+        self,
+        base_ranker: BM25Ranker,
+        corpus,
+        alpha: float = 0.7,
+        beta: float = 0.2,
+        gamma: float = 0.1,
+        delta: float = 0.5,
+    ):
+        """
+        Args:
+            base_ranker: BM25Ranker instance built on the same InvertedIndex
+            corpus: preprocessed corpus dict {pid: preprocessed_doc}
+            alpha: weight for BM25 textual score
+            beta: weight for normalized rating
+            gamma: weight for normalized discount
+            delta: penalty weight for out-of-stock items
+        """
+        self.base_ranker = base_ranker
+        self.index = base_ranker.index
+        self.corpus = corpus
+        self.pid_list = self.index.pid_list
+
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+        self.delta = delta
+
+    def _compute_custom_score(self, query_terms, doc_idx: int) -> float:
+        """
+        Compute the combined score for a given document.
+        """
+        pid = self.pid_list[doc_idx]
+        doc = self.corpus[pid]
+        original = doc["original"]
+
+        # 1. Textual score from BM25
+        bm25_score = self.base_ranker.score_doc(query_terms, doc_idx)
+
+        # 2. Normalized numerical signals
+        r_norm = rating_norm(original)
+        d_norm = discount_norm(original)
+        out_of_stock = bool(original.get("out_of_stock", False))
+        out_penalty = 1.0 if out_of_stock else 0.0
+
+        # 3. Linear combination
+        return self.alpha * bm25_score + self.beta * r_norm + self.gamma * d_norm - self.delta * out_penalty
+
+    def rank_documents(self, query_terms, candidate_doc_indices):
+        """
+        Rank documents by the custom combined score.
+
+        Args:
+            query_terms: list of preprocessed query tokens
+            candidate_doc_indices: set of document indices (AND semantics)
+
+        Returns:
+            list of (pid, score) tuples sorted by score descending.
+        """
+        if not candidate_doc_indices:
+            return []
+
+        scores = []
+        for doc_idx in candidate_doc_indices:
+            pid = self.pid_list[doc_idx]
+            score = self._compute_custom_score(query_terms, doc_idx)
             scores.append((pid, score))
 
         scores.sort(key=lambda x: x[1], reverse=True)

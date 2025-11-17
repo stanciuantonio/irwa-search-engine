@@ -3,7 +3,7 @@ import numpy as np
 
 from myapp.search.objects import Document
 
-from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker
+from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker, CustomScoreRanker
 from myapp.preprocessing.text_processing import build_query_terms
 
 def dummy_search(corpus: dict, search_id, num_results=20):
@@ -104,4 +104,46 @@ class SearchEngine:
 
         ranker = BM25Ranker(inv_index)
         ranked_results = ranker.rank_documents(query_terms, candidate_doc_indices)
+        return ranked_results[:top_k]
+
+    def search_custom(self, query, corpus, top_k: int, alpha: float = 0.7, beta: float = 0.2, gamma: float = 0.1, delta: float = 0.5):
+        """
+        Search documents using conjunctive query (AND) and a custom ranking
+        that combines BM25 with rating, discount, and out-of-stock signals.
+
+        Args:
+            query: raw query string
+            corpus: preprocessed corpus dict {pid: preprocessed_doc}
+            top_k: number of results to return
+            alpha: weight for BM25 score
+            beta: weight for normalized rating
+            gamma: weight for normalized discount
+            delta: penalty weight for out-of-stock documents
+
+        Returns:
+            list of (pid, score) tuples ranked by the custom score
+        """
+        # 1. Preprocess query
+        query_terms = build_query_terms(query)
+        print(f"Processed query terms (Custom): {query_terms}")
+
+        if not query_terms:
+            return []
+
+        # 2. Build inverted index and candidate set (AND semantics)
+        inv_index = InvertedIndex(corpus)
+        candidate_doc_indices = inv_index.search_conjunctive(query_terms)
+
+        if not candidate_doc_indices:
+            print("No documents found matching all query terms (Custom)")
+            return []
+
+        print(f"Found {len(candidate_doc_indices)} documents matching all terms (Custom)")
+
+        # 3. Base BM25 ranker
+        bm25_ranker = BM25Ranker(inv_index)
+
+        # 4. Custom ranker on top of BM25 + numerical signals
+        custom_ranker = CustomScoreRanker(base_ranker=bm25_ranker, corpus=corpus, alpha=alpha, beta=beta, gamma=gamma, delta=delta)
+        ranked_results = custom_ranker.rank_documents(query_terms, candidate_doc_indices)
         return ranked_results[:top_k]
