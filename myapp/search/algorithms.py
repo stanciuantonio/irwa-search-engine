@@ -1,6 +1,7 @@
 import math
 import time
 from collections import defaultdict
+from typing import Dict, Iterable, List, Tuple
 
 from myapp.preprocessing.text_processing import build_query_terms
 from myapp.core.scoring_utils import rating_norm, discount_norm
@@ -366,3 +367,194 @@ class CustomScoreRanker:
 
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores
+
+class Word2VecRanker:
+    """
+    Ranker that represents documents and queries by the average of their
+    word2vec word vectors, and ranks by cosine similarity.
+
+    Args:
+        inverted_index: instance of InvertedIndex (provides corpus and pid_list)
+        embeddings: dict mapping token -> vector (iterable of floats, length = dim)
+            e.g. {'apple': [0.12, -0.03, ...], ...}
+        normalize_doc_vectors: if True, pre-normalize document vectors to unit length
+    """
+
+    def __init__(self, inverted_index, embeddings: Dict[str, Iterable[float]], normalize_doc_vectors: bool = True):
+        self.index = inverted_index
+        self.corpus = inverted_index.corpus
+        self.pid_list = inverted_index.pid_list
+        self.embeddings = embeddings
+        # Determine embedding dimensionality from the first embedding
+        any_vec = next(iter(embeddings.values())) if embeddings else None
+        self.dim = len(any_vec) if any_vec is not None else 0
+
+        # Precompute averaged document vectors (doc_idx -> vector list)
+        self.doc_vectors = {}       # doc_idx -> list[float]
+        self.doc_norms = {}         # doc_idx -> float (norm)
+        self.normalize_doc_vectors = normalize_doc_vectors
+        self._build_doc_vectors()
+
+    def _vector_add_inplace(self, acc, vec):
+        for i in range(len(acc)):
+            acc[i] += vec[i]
+
+    def _vector_scale_inplace(self, acc, s):
+        for i in range(len(acc)):
+            acc[i] *= s
+
+    def _vec_dot(self, a, b):
+        # assume same length
+        dot = 0.0
+        for i in range(len(a)):
+            dot += a[i] * b[i]
+        return dot
+
+    def _vec_norm(self, v):
+        s = 0.0
+        for x in v:
+            s += x * x
+        return math.sqrt(s)
+
+    def _build_doc_vectors(self):
+        """
+        For every document in the inverted index corpus, compute the average
+        of word vectors for tokens present in corpus[pid]['searchable_text'].
+        """
+        for doc_idx, pid in enumerate(self.pid_list):
+            tokens = self.corpus[pid].get("searchable_text", [])
+            if not tokens:
+                # zero vector
+                vec = [0.0] * self.dim
+                self.doc_vectors[doc_idx] = vec
+                self.doc_norms[doc_idx] = 0.0
+                continue
+
+            acc = [0.0] * self.dim
+            count = 0
+            for t in tokens:
+                v = self.embeddings.get(t)
+                if v is None:
+                    continue
+                # support any iterable (tuple/list/ndarray-like)
+                # ensure length matches expected dim; if not, skip
+                if len(v) != self.dim:
+                    continue
+                if isinstance(v, (list, tuple)):
+                    self._vector_add_inplace(acc, v)
+                else:
+                    # generic iterable
+                    for i, val in enumerate(v):
+                        acc[i] += val
+                count += 1
+
+            if count == 0:
+                vec = [0.0] * self.dim
+                norm = 0.0
+            else:
+                inv_count = 1.0 / count
+                self._vector_scale_inplace(acc, inv_count)
+                vec = acc
+                norm = self._vec_norm(vec)
+
+                if self.normalize_doc_vectors and norm > 0.0:
+                    # normalize in-place to unit vector to speed up cosine (then norm = 1)
+                    self._vector_scale_inplace(vec, 1.0 / norm)
+                    norm = 1.0
+
+            self.doc_vectors[doc_idx] = vec
+            self.doc_norms[doc_idx] = norm
+
+    def _build_query_vector(self, query_terms: Iterable[str]) -> Tuple[List[float], float]:
+        """
+        Build averaged word2vec vector for the query (same averaging strategy as docs).
+        Returns (vector, norm).
+        """
+        if not query_terms:
+            return [0.0] * self.dim, 0.0
+
+        acc = [0.0] * self.dim
+        count = 0
+        for t in query_terms:
+            v = self.embeddings.get(t)
+            if v is None:
+                continue
+            if len(v) != self.dim:
+                continue
+            # add
+            for i, val in enumerate(v):
+                acc[i] += val
+            count += 1
+
+        if count == 0:
+            return [0.0] * self.dim, 0.0
+
+        inv_count = 1.0 / count
+        for i in range(self.dim):
+            acc[i] *= inv_count
+
+        norm = self._vec_norm(acc)
+        if self.normalize_doc_vectors and norm > 0.0:
+            # normalize to unit length to match docs
+            for i in range(self.dim):
+                acc[i] /= norm
+            norm = 1.0
+
+        return acc, norm
+
+    def _cosine_similarity(self, q_vec, q_norm, d_vec, d_norm):
+        """
+        Cosine similarity. If doc/query are normalized to unit length,
+        this is simply dot product; else divide by norms.
+        """
+        if q_norm == 0.0 or d_norm == 0.0:
+            return 0.0
+
+        dot = self._vec_dot(q_vec, d_vec)
+        if self.normalize_doc_vectors and q_norm == 1.0 and d_norm == 1.0:
+            return dot
+        return dot / (q_norm * d_norm)
+
+    def rank_documents(self, query_terms: Iterable[str], candidate_doc_indices: Iterable[int]) -> List[Tuple[str, float]]:
+        """
+        Rank candidate documents (doc indices) by cosine similarity between
+        the averaged word2vec query vector and precomputed document vectors.
+
+        Returns:
+            list of (pid, score) sorted descending.
+        """
+        q_vec, q_norm = self._build_query_vector(query_terms)
+        if q_norm == 0.0:
+            return []
+
+        scores = []
+        for doc_idx in candidate_doc_indices:
+            d_vec = self.doc_vectors.get(doc_idx)
+            d_norm = self.doc_norms.get(doc_idx, 0.0)
+            if d_vec is None or d_norm == 0.0:
+                score = 0.0
+            else:
+                score = self._cosine_similarity(q_vec, q_norm, d_vec, d_norm)
+            pid = self.pid_list[doc_idx]
+            scores.append((pid, score))
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return scores
+
+    def rank_queries(self, raw_queries: Iterable[str], top_k: int = 20, preprocess=build_query_terms):
+        """
+        Given an iterable of raw queries (strings), preprocess them using `preprocess`
+        (default: build_query_terms) and return top_k results for each query.
+
+        Returns:
+            dict: {raw_query: [(pid, score), ...top_k...] }
+        """
+        results = {}
+        for raw_q in raw_queries:
+            q_terms = preprocess(raw_q)
+            # Use conjunctive search candidate set (same as other rankers)
+            candidate_doc_indices = self.index.search_conjunctive(q_terms)
+            ranked = self.rank_documents(q_terms, candidate_doc_indices)
+            results[raw_q] = ranked[:top_k]
+        return results
+

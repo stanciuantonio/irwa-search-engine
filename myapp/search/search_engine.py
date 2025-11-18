@@ -3,7 +3,7 @@ import numpy as np
 
 from myapp.search.objects import Document
 
-from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker, CustomScoreRanker
+from myapp.search.algorithms import InvertedIndex, TFIDFRanker, BM25Ranker, CustomScoreRanker, Word2VecRanker
 from myapp.preprocessing.text_processing import build_query_terms
 
 def dummy_search(corpus: dict, search_id, num_results=20):
@@ -146,4 +146,44 @@ class SearchEngine:
         # 4. Custom ranker on top of BM25 + numerical signals
         custom_ranker = CustomScoreRanker(base_ranker=bm25_ranker, corpus=corpus, alpha=alpha, beta=beta, gamma=gamma, delta=delta)
         ranked_results = custom_ranker.rank_documents(query_terms, candidate_doc_indices)
+        return ranked_results[:top_k]
+
+    def search_word2vec(self, query, corpus, embeddings, top_k: int):
+        """
+        Search using averaged Word2Vec document vectors + cosine similarity.
+
+        Args:
+            query: raw query string
+            corpus: preprocessed corpus {pid: preprocessed_doc}
+            embeddings: dict token -> vector (all vectors must have same dimension)
+            top_k: number of returned results
+
+        Returns:
+            list of (pid, score) tuples
+        """
+
+        # 1. Preprocess query
+        query_terms = build_query_terms(query)
+        print(f"Processed query terms (w2v): {query_terms}")
+
+        if not query_terms:
+            return []
+
+        # 2. Build inverted index
+        inv_index = InvertedIndex(corpus)
+
+        # 3. Conjunctive (AND) candidate lookup
+        candidate_doc_indices = inv_index.search_conjunctive(query_terms)
+
+        if not candidate_doc_indices:
+            print("No documents found matching all query terms (w2v)")
+            return []
+
+        print(f"Found {len(candidate_doc_indices)} documents matching all terms (w2v)")
+
+        # 4. Rank using word2vec cosine similarity
+        w2v_ranker = Word2VecRanker(inv_index, embeddings)
+        ranked_results = w2v_ranker.rank_documents(query_terms, candidate_doc_indices)
+
+        # 5. Return top-K
         return ranked_results[:top_k]
