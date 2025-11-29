@@ -22,6 +22,11 @@ class Document(BaseModel):
     url: Optional[str] = None
     images: Optional[List[str]] = None
 
+    # Ranking information for search results
+    ranking_score: Optional[float] = None
+    algorithm_used: Optional[str] = None
+    ranking_position: Optional[int] = None
+
     def to_json(self):
         return self.model_dump_json()
 
@@ -92,7 +97,7 @@ class StatsDocument(BaseModel):
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
-    
+
     def to_json(self):
         return self.model_dump_json()
 
@@ -106,6 +111,6 @@ class ResultItem(BaseModel):
 
     def __str__(self) -> str:
         return self.model_dump_json(indent=2)
-    
+
     def to_json(self):
         return self.model_dump_json()
