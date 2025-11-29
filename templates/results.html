@@ -1,27 +1,116 @@
 {% extends "base.html" %}
 {% block page_title %}{{ page_title }}{% endblock %}
 {% block content %}
-    Found <strong>{{ found_counter }}</strong> results...
-    <hr>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            Found <strong>{{ found_counter }}</strong> results
+            {% if algorithm %}
+                <span class="badge badge-info ml-2">Algorithm: {{ algorithm|upper }}</span>
+            {% endif %}
+        </div>
+        <a href="/" class="btn btn-outline-secondary btn-sm">New Search</a>
+    </div>
+
     {% if rag_response %}
-        <div class="mb-4 p-3" style="border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9;">
-            <h5>AI-Generated Summary:</h5>
-            <p>{{ rag_response }}</p>
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <strong>AI-Generated Summary</strong>
+            </div>
+            <div class="card-body">
+                <p class="mb-0" style="white-space: pre-line;">{{ rag_response }}</p>
+            </div>
         </div>
     {% endif %}
+
     <hr>
+
     {% for item in results_list %}
-        <div class="pb-3">
-            <div class="doc-title">
-                <a href="{{ item.url }}">{{ item.title }}...
-                </a>
-            </div>
-            <div class="doc-desc">
-                {{ item.doc_date }} — {{ item.description }}
-            </div>
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <!-- Product Image -->
+                    <div class="col-md-2">
+                        {% if item.images and item.images|length > 0 %}
+                            <img src="{{ item.images[0] }}" alt="{{ item.title }}" class="img-fluid" style="max-height: 120px; object-fit: contain;">
+                        {% else %}
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 120px;">
+                                <span class="text-muted">No Image</span>
+                            </div>
+                        {% endif %}
+                    </div>
 
+                    <!-- Product Info -->
+                    <div class="col-md-10">
+                        <!-- Title and Ranking -->
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-1">
+                                <a href="{{ item.url }}&pos={{ item.ranking_position }}" class="text-dark">{{ item.title }}</a>
+                            </h5>
+                            <span class="badge badge-secondary">#{{ item.ranking_position }}</span>
+                        </div>
+
+                        <!-- Brand and Category -->
+                        <p class="text-muted mb-2 small">
+                            {% if item.brand %}<strong>{{ item.brand }}</strong> | {% endif %}
+                            {% if item.category %}{{ item.category }}{% endif %}
+                            {% if item.sub_category %} &gt; {{ item.sub_category }}{% endif %}
+                        </p>
+
+                        <!-- Description -->
+                        <p class="card-text small">
+                            {{ item.description[:200] if item.description else 'No description available' }}{% if item.description and item.description|length > 200 %}...{% endif %}
+                        </p>
+
+                        <!-- Price, Rating, Discount Row -->
+                        <div class="d-flex flex-wrap align-items-center mt-2">
+                            <!-- Price -->
+                            {% if item.selling_price %}
+                                <span class="h5 text-success mb-0 mr-3">
+                                    ₹{{ "%.2f"|format(item.selling_price) }}
+                                </span>
+                            {% endif %}
+
+                            <!-- Original Price & Discount -->
+                            {% if item.actual_price and item.discount %}
+                                <span class="text-muted mr-2" style="text-decoration: line-through;">
+                                    ₹{{ "%.2f"|format(item.actual_price) }}
+                                </span>
+                                <span class="badge badge-danger mr-3">{{ "%.0f"|format(item.discount) }}% OFF</span>
+                            {% endif %}
+
+                            <!-- Rating -->
+                            {% if item.average_rating %}
+                                <span class="mr-3">
+                                    <span class="badge badge-warning text-dark">
+                                        ★ {{ "%.1f"|format(item.average_rating) }}/5
+                                    </span>
+                                </span>
+                            {% endif %}
+
+                            <!-- Stock Status -->
+                            {% if item.out_of_stock %}
+                                <span class="badge badge-secondary">Out of Stock</span>
+                            {% else %}
+                                <span class="badge badge-success">In Stock</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Ranking Score (small, for analytics) -->
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Score: {{ item.ranking_score }} |
+                                Seller: {{ item.seller if item.seller else 'N/A' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
     {% endfor %}
-{% endblock %}
 
+    {% if found_counter == 0 %}
+        <div class="alert alert-info">
+            No results found. Try different search terms.
+        </div>
+    {% endif %}
+{% endblock %}

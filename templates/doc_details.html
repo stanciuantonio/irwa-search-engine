@@ -1,18 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Document Detail - IRWA Search Engine</title>
-</head>
-<body>
-<div><a href="/" >Home</a></div>
-<div><a href="/stats" >Stats</a></div>
-<div><a href="/dashboard" >Dashboard</a></div>
-<h1>Document Detail Page</h1>
-<p>This is a placeholder for document details.</p>
-<p>Here you can display more information about the document.</p>
-<p>For example, you might show the full text of the document, metadata, or other relevant details.</p>
-<p>You can also include links to related documents or resources.</p>
-<p>Feel free to customize this page to fit the needs of your application.</p>
-</body>
-</html>
+{% extends "base.html" %}
+{% block page_title %}Product Details{% endblock %}
+{% block content %}
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item"><a href="/stats">Stats</a></li>
+            <li class="breadcrumb-item active">Product Details</li>
+        </ol>
+    </nav>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% elif doc %}
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <!-- Product Images -->
+                    <div class="col-md-4">
+                        {% if doc.images and doc.images|length > 0 %}
+                            <img src="{{ doc.images[0] }}" alt="{{ doc.title }}" class="img-fluid mb-3" style="max-height: 300px; object-fit: contain;">
+                            {% if doc.images|length > 1 %}
+                                <div class="row">
+                                    {% for img in doc.images[1:4] %}
+                                        <div class="col-4">
+                                            <img src="{{ img }}" alt="Product image" class="img-fluid img-thumbnail" style="height: 60px; object-fit: cover;">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 300px;">
+                                <span class="text-muted">No Image Available</span>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Product Info -->
+                    <div class="col-md-8">
+                        <!-- Title -->
+                        <h3 class="mb-2">{{ doc.title }}</h3>
+
+                        <!-- Brand and Category -->
+                        <p class="text-muted mb-3">
+                            {% if doc.brand %}<strong>Brand:</strong> {{ doc.brand }} | {% endif %}
+                            {% if doc.category %}<strong>Category:</strong> {{ doc.category }}{% endif %}
+                            {% if doc.sub_category %} &gt; {{ doc.sub_category }}{% endif %}
+                        </p>
+
+                        <!-- Price Section -->
+                        <div class="mb-3 p-3 bg-light rounded">
+                            <div class="d-flex align-items-baseline">
+                                {% if doc.selling_price %}
+                                    <span class="h3 text-success mr-3">₹{{ "%.2f"|format(doc.selling_price) }}</span>
+                                {% endif %}
+                                {% if doc.actual_price %}
+                                    <span class="text-muted mr-2" style="text-decoration: line-through;">
+                                        MRP: ₹{{ "%.2f"|format(doc.actual_price) }}
+                                    </span>
+                                {% endif %}
+                                {% if doc.discount %}
+                                    <span class="badge badge-danger badge-lg">{{ "%.0f"|format(doc.discount) }}% OFF</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Inclusive of all taxes</small>
+                        </div>
+
+                        <!-- Rating -->
+                        {% if doc.average_rating %}
+                            <div class="mb-3">
+                                <span class="badge badge-warning text-dark p-2">
+                                    ★ {{ "%.1f"|format(doc.average_rating) }} / 5
+                                </span>
+                                <span class="text-muted ml-2">Average Rating</span>
+                            </div>
+                        {% endif %}
+
+                        <!-- Stock Status -->
+                        <div class="mb-3">
+                            {% if doc.out_of_stock %}
+                                <span class="badge badge-danger p-2">Out of Stock</span>
+                            {% else %}
+                                <span class="badge badge-success p-2">In Stock</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Seller -->
+                        {% if doc.seller %}
+                            <p class="mb-2"><strong>Seller:</strong> {{ doc.seller }}</p>
+                        {% endif %}
+
+                        <!-- External Link -->
+                        {% if doc.url %}
+                            <a href="{{ doc.url }}" target="_blank" class="btn btn-primary mt-2">
+                                View on Original Site
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Description -->
+                <div class="mb-4">
+                    <h5>Description</h5>
+                    <p>{{ doc.description if doc.description else 'No description available.' }}</p>
+                </div>
+
+                <!-- Product Details/Specifications -->
+                {% if doc.product_details %}
+                    <div class="mb-4">
+                        <h5>Product Specifications</h5>
+                        <table class="table table-striped table-sm">
+                            <tbody>
+                                {% for key, value in doc.product_details.items() %}
+                                    <tr>
+                                        <th scope="row" style="width: 30%;">{{ key }}</th>
+                                        <td>{{ value }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+
+                <!-- Product ID -->
+                <div class="mt-4 text-muted small">
+                    <strong>Product ID:</strong> {{ doc.pid }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-3">
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                &larr; Back to Results
+            </a>
+        </div>
+    {% else %}
+        <div class="alert alert-warning">
+            No document data available.
+        </div>
+    {% endif %}
+{% endblock %}
