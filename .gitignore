@@ -138,3 +138,6 @@ irwa_env/
 data/
 
 !data/test_queries_labels.csv
+
+#Analytics data
+analytics.db
