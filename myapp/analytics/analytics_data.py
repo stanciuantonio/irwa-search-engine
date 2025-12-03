@@ -1,13 +1,5 @@
 """
 Analytics Data Module - Web Analytics for IRWA Search Engine
-
-TODO: Future improvements to implement:
-- [ ] Full star schema with Session, Query, Click, Request tables
-- [ ] Pickle persistence for data between restarts
-- [ ] Dwell time calculation (time between click and return)
-- [ ] User agent/browser tracking
-- [ ] CTR by ranking position
-- [ ] Hourly activity tracking
 """
 
 import json
@@ -18,106 +10,181 @@ from collections import defaultdict
 import altair as alt
 import pandas as pd
 
+from myapp.analytics.db_manager import DBManager
+
 
 class AnalyticsData:
     """
-    In-memory analytics storage.
+    SQLite-backed analytics storage.
     Tracks basic metrics: clicks, queries, sessions.
     """
 
     def __init__(self):
-        # Click counter per document
-        self.fact_clicks: Dict[str, int] = {}
-
-        # Query tracking
-        self.queries: List[Dict] = []
-
-        # Session tracking (basic)
-        self.sessions: Dict[str, Dict] = {}
-
-        # Click details for analytics
-        self.click_details: List[Dict] = []
-
-        self._query_counter = 0
+        self.db = DBManager()
 
     def save_query_terms(self, query_text: str, session_id: str = None,
                          algorithm: str = 'tfidf', num_results: int = 0) -> int:
         """Save a search query and return query_id"""
-        self._query_counter += 1
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
 
-        self.queries.append({
-            'query_id': self._query_counter,
-            'query_text': query_text,
-            'session_id': session_id,
-            'algorithm': algorithm,
-            'num_results': num_results,
-            'timestamp': datetime.now().isoformat()
-        })
+        timestamp = datetime.now().isoformat()
 
-        return self._query_counter
+        cursor.execute('''
+            INSERT INTO queries (query_text, session_id, algorithm, num_results, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (query_text, session_id, algorithm, num_results, timestamp))
+
+        query_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return query_id
 
     def save_click(self, doc_id: str, session_id: str = None,
                    query_id: int = None, ranking_position: int = None):
         """Save a document click"""
-        # Update click counter
-        if doc_id in self.fact_clicks:
-            self.fact_clicks[doc_id] += 1
-        else:
-            self.fact_clicks[doc_id] = 1
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
 
-        # Save click details
-        self.click_details.append({
-            'doc_id': doc_id,
-            'session_id': session_id,
-            'query_id': query_id,
-            'ranking_position': ranking_position,
-            'timestamp': datetime.now().isoformat()
-        })
+        timestamp = datetime.now().isoformat()
+
+        cursor.execute('''
+            INSERT INTO clicks (doc_id, session_id, query_id, ranking_position, timestamp)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (doc_id, session_id, query_id, ranking_position, timestamp))
+
+        conn.commit()
+        conn.close()
 
     def get_or_create_session(self, session_id: str, ip_address: str = None,
                                browser: str = None, os_name: str = None) -> Dict:
         """Get or create a session"""
-        if session_id not in self.sessions:
-            self.sessions[session_id] = {
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        # Check if session exists
+        cursor.execute('SELECT * FROM sessions WHERE session_id = ?', (session_id,))
+        row = cursor.fetchone()
+
+        if row:
+            session_data = dict(row)
+        else:
+            # Create new session
+            start_time = datetime.now().isoformat()
+            cursor.execute('''
+                INSERT INTO sessions (session_id, ip_address, browser, os_name, start_time)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (session_id, ip_address, browser, os_name, start_time))
+            conn.commit()
+
+            session_data = {
                 'session_id': session_id,
                 'ip_address': ip_address,
                 'browser': browser,
-                'os': os_name,
-                'start_time': datetime.now().isoformat()
+                'os_name': os_name,
+                'start_time': start_time
             }
-        return self.sessions[session_id]
+
+        conn.close()
+        return session_data
 
     # Summary statistics
     def get_summary_stats(self) -> Dict[str, Any]:
         """Get summary statistics for dashboard"""
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT COUNT(*) FROM sessions')
+        total_sessions = cursor.fetchone()[0]
+
+        cursor.execute('SELECT COUNT(*) FROM queries')
+        total_queries = cursor.fetchone()[0]
+
+        cursor.execute('SELECT COUNT(*) FROM clicks')
+        total_clicks = cursor.fetchone()[0]
+
+        cursor.execute('SELECT COUNT(DISTINCT doc_id) FROM clicks')
+        unique_docs_clicked = cursor.fetchone()[0]
+
+        conn.close()
+
         return {
-            'total_sessions': len(self.sessions),
-            'total_queries': len(self.queries),
-            'total_clicks': len(self.click_details),
-            'unique_docs_clicked': len(self.fact_clicks)
+            'total_sessions': total_sessions,
+            'total_queries': total_queries,
+            'total_clicks': total_clicks,
+            'unique_docs_clicked': unique_docs_clicked
         }
 
     def get_top_queries(self, limit: int = 10) -> List[Dict]:
         """Get most frequent queries"""
-        query_counts = defaultdict(int)
-        for q in self.queries:
-            query_counts[q['query_text']] += 1
-        sorted_queries = sorted(query_counts.items(), key=lambda x: x[1], reverse=True)
-        return [{'query': q, 'count': c} for q, c in sorted_queries[:limit]]
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT query_text as query, COUNT(*) as count
+            FROM queries
+            GROUP BY query_text
+            ORDER BY count DESC
+            LIMIT ?
+        ''', (limit,))
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [dict(row) for row in rows]
 
     def get_algorithm_distribution(self) -> Dict[str, int]:
         """Get distribution of algorithms used"""
-        algo_counts = defaultdict(int)
-        for q in self.queries:
-            algo_counts[q.get('algorithm', 'unknown')] += 1
-        return dict(algo_counts)
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT algorithm, COUNT(*) as count
+            FROM queries
+            GROUP BY algorithm
+        ''')
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return {row['algorithm']: row['count'] for row in rows}
+
+    @property
+    def fact_clicks(self) -> Dict[str, int]:
+        """
+        Property to maintain compatibility with existing code that accesses fact_clicks directly.
+        Returns a dictionary of doc_id -> click_count
+        """
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT doc_id, COUNT(*) as count FROM clicks GROUP BY doc_id')
+        rows = cursor.fetchall()
+        conn.close()
+
+        return {row['doc_id']: row['count'] for row in rows}
 
     # Visualization Methods
     def plot_number_of_views(self):
         """Bar chart of document views"""
-        data = [{'Document ID': doc_id[:12] + '...' if len(doc_id) > 12 else doc_id, 'Views': count}
-                for doc_id, count in sorted(self.fact_clicks.items(),
-                                           key=lambda x: x[1], reverse=True)[:10]]
+        conn = self.db.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT doc_id, COUNT(*) as count
+            FROM clicks
+            GROUP BY doc_id
+            ORDER BY count DESC
+            LIMIT 10
+        ''')
+        rows = cursor.fetchall()
+        conn.close()
+
+        data = [{'Document ID': row['doc_id'][:12] + '...' if len(row['doc_id']) > 12 else row['doc_id'],
+                 'Views': row['count']}
+                for row in rows]
+
         if not data:
             data = [{'Document ID': 'No data yet', 'Views': 0}]
 
