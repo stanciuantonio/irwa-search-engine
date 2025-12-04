@@ -74,8 +74,11 @@ def index():
         os_name=agent.get('os', {}).get('name')
     )
 
+    # Get search history from session
+    search_history = session.get('search_history', [])
+
     print("Remote IP: {} - Browser: {}".format(user_ip, agent))
-    return render_template('index.html', page_title="Welcome")
+    return render_template('index.html', page_title="Welcome", search_history=search_history)
 
 
 @app.route('/search', methods=['POST'])
@@ -85,6 +88,15 @@ def search_form_post():
 
     session['last_search_query'] = search_query
     session_id = get_session_id()
+
+    # Add to search history (keep last 10 unique searches)
+    search_history = session.get('search_history', [])
+    # Remove if already exists (to move to top)
+    search_history = [s for s in search_history if s['query'] != search_query]
+    # Add new search at the beginning
+    search_history.insert(0, {'query': search_query, 'algorithm': algorithm})
+    # Keep only last 10
+    session['search_history'] = search_history[:10]
 
     # Use real search with selected algorithm
     results = search_engine.search(search_query, session_id, preprocessed_corpus, algorithm, top_k=20)

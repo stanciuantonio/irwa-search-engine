@@ -1,47 +1,462 @@
 {% extends "base.html" %}
 {% block page_title %}{{ page_title }}{% endblock %}
+
 {% block content %}
-    <div class="centered">
-        <p>&nbsp;</p>
-        <p>&nbsp;</p>
-        <form method="POST" action="/search">
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="input-group mb-3">
-                        <input class="form-control" name="search-query" type="search"
-                               placeholder="Search for fashion products..." aria-label="Search"
-                               autofocus="autofocus" required>
-                        <div class="input-group-append">
-                            <button class="btn btn-primary" type="submit">Search</button>
+<div class="home-container">
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <div class="hero-content text-center">
+                <h1 class="hero-title">Find your style.</h1>
+                <p class="hero-subtitle">Search through thousands of exclusive fashion items with AI-powered recommendations.</p>
+
+                <!-- Search Form -->
+                <div class="search-wrapper">
+                    <form action="/search" method="post" name="search-form" class="search-form">
+                        <div class="search-input-container">
+                            <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="M21 21l-4.35-4.35"></path>
+                            </svg>
+                            <input type="text"
+                                   class="search-input"
+                                   name="search-query"
+                                   placeholder="Search for shoes, jackets, brands..."
+                                   autofocus
+                                   required>
+                            <button type="submit" class="search-btn">
+                                Search
+                            </button>
+                        </div>
+
+                        <!-- Algorithm Selection -->
+                        <div class="algorithm-selector">
+                            <span class="algo-label">Algorithm:</span>
+                            <div class="algo-options">
+                                <label class="algo-option">
+                                    <input type="radio" name="algorithm" value="tfidf" checked>
+                                    <span class="algo-btn algo-tfidf">
+                                        <span class="algo-name">TF-IDF</span>
+                                        <span class="algo-desc">Classic relevance</span>
+                                    </span>
+                                </label>
+                                <label class="algo-option">
+                                    <input type="radio" name="algorithm" value="bm25">
+                                    <span class="algo-btn algo-bm25">
+                                        <span class="algo-name">BM25</span>
+                                        <span class="algo-desc">Best match</span>
+                                    </span>
+                                </label>
+                                <label class="algo-option">
+                                    <input type="radio" name="algorithm" value="custom">
+                                    <span class="algo-btn algo-custom">
+                                        <span class="algo-name">Smart</span>
+                                        <span class="algo-desc">Rating + Price</span>
+                                    </span>
+                                </label>
+                                <label class="algo-option">
+                                    <input type="radio" name="algorithm" value="word2vec">
+                                    <span class="algo-btn algo-word2vec">
+                                        <span class="algo-name">AI</span>
+                                        <span class="algo-desc">Semantic search</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Search History -->
+                    {% if search_history %}
+                    <div class="search-history">
+                        <span class="history-label">Recent searches:</span>
+                        <div class="history-items">
+                            {% for item in search_history %}
+                            <a href="#" class="history-item" onclick="searchWithHistory('{{ item.query }}', '{{ item.algorithm }}'); return false;">
+                                <span class="history-query">{{ item.query }}</span>
+                                <span class="history-algo algo-{{ item.algorithm }}">{{ item.algorithm|upper }}</span>
+                            </a>
+                            {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Algorithm Selection -->
-            <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="algorithm"><small>Ranking Algorithm:</small></label>
-                        <select class="form-control form-control-sm" name="algorithm" id="algorithm">
-                            <option value="tfidf" selected>TF-IDF + Cosine Similarity</option>
-                            <option value="bm25">BM25</option>
-                            <option value="custom">Custom Score (BM25 + Rating + Discount)</option>
-                            <option value="word2vec">Word2Vec + Cosine Similarity</option>
-                        </select>
+    <!-- Features Section -->
+    <div class="features-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Multiple Algorithms</h3>
+                        <p class="feature-desc">Choose from TF-IDF, BM25, Smart ranking, or AI-powered semantic search.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">AI Recommendations</h3>
+                        <p class="feature-desc">Get personalized product recommendations powered by RAG technology.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Analytics Dashboard</h3>
+                        <p class="feature-desc">Track search behavior and engagement with real-time analytics.</p>
                     </div>
                 </div>
             </div>
-        </form>
-        <p>&nbsp;</p>
-
-        <!-- Quick Links -->
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <a href="/dashboard" class="btn btn-outline-secondary btn-sm mr-2">Analytics Dashboard</a>
-                <a href="/stats" class="btn btn-outline-secondary btn-sm">Stats</a>
-            </div>
         </div>
-        <p>&nbsp;</p>
     </div>
+
+</div>
+
+<style>
+/* Home Container */
+.home-container {
+    min-height: calc(100vh - 160px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Hero Section */
+.hero-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 4rem 0;
+    background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
+}
+
+.hero-content {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -2px;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #000 0%, #333 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: #6c757d;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+}
+
+/* Search Form */
+.search-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.search-input-container {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 50px;
+    padding: 8px 8px 8px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.search-input-container:focus-within {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.search-icon {
+    color: #adb5bd;
+    flex-shrink: 0;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 1.1rem;
+    padding: 12px 16px;
+    background: transparent;
+}
+
+.search-input::placeholder {
+    color: #adb5bd;
+}
+
+.search-btn {
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 32px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.search-btn:hover {
+    background: #333;
+    transform: translateY(-1px);
+}
+
+/* Algorithm Selector */
+.algorithm-selector {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.algo-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.algo-options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.algo-option {
+    cursor: pointer;
+    margin: 0;
+}
+
+.algo-option input {
+    display: none;
+}
+
+.algo-btn {
+    display: block;
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-width: 100px;
+}
+
+.algo-btn:hover {
+    background: #e9ecef;
+}
+
+.algo-option input:checked + .algo-btn {
+    border-color: #000;
+    background: #fff;
+}
+
+.algo-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #000;
+}
+
+.algo-desc {
+    display: block;
+    font-size: 0.65rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+/* Algorithm colors */
+.algo-option input:checked + .algo-btn.algo-tfidf { border-color: #4CAF50; }
+.algo-option input:checked + .algo-btn.algo-bm25 { border-color: #2196F3; }
+.algo-option input:checked + .algo-btn.algo-custom { border-color: #FF9800; }
+.algo-option input:checked + .algo-btn.algo-word2vec { border-color: #9C27B0; }
+
+/* Features Section */
+.features-section {
+    padding: 4rem 0;
+    background: #fff;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 2rem;
+    border-radius: 16px;
+    background: #f8f9fa;
+    height: 100%;
+    transition: transform 0.2s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+}
+
+.feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #fff;
+    margin-bottom: 1.5rem;
+    color: #000;
+}
+
+.feature-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.feature-desc {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Search History */
+.search-history {
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.history-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+}
+
+.history-items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.history-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    border-color: #000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.history-query {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #000;
+}
+
+.history-algo {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.history-algo.algo-tfidf { background: #e8f5e9; color: #2e7d32; }
+.history-algo.algo-bm25 { background: #e3f2fd; color: #1565c0; }
+.history-algo.algo-custom { background: #fff3e0; color: #ef6c00; }
+.history-algo.algo-word2vec { background: #f3e5f5; color: #7b1fa2; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .search-input-container {
+        flex-direction: column;
+        border-radius: 20px;
+        padding: 16px;
+    }
+
+    .search-icon {
+        display: none;
+    }
+
+    .search-input {
+        width: 100%;
+        text-align: center;
+    }
+
+    .search-btn {
+        width: 100%;
+        margin-top: 12px;
+    }
+
+    .algo-btn {
+        min-width: 80px;
+        padding: 10px 14px;
+    }
+
+    .algo-name {
+        font-size: 0.75rem;
+    }
+
+    .algo-desc {
+        display: none;
+    }
+
+    .history-items {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+</style>
+
+<script>
+function searchWithHistory(query, algorithm) {
+    // Set the search input value
+    document.querySelector('input[name="search-query"]').value = query;
+
+    // Set the algorithm radio button
+    document.querySelector('input[name="algorithm"][value="' + algorithm + '"]').checked = true;
+
+    // Submit the form
+    document.querySelector('form[name="search-form"]').submit();
+}
+</script>
 {% endblock %}

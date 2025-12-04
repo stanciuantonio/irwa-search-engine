@@ -2,145 +2,371 @@
 {% block page_title %}Analytics Dashboard{% endblock %}
 
 {% block content %}
-    <h3 class="mb-4">Analytics Dashboard</h3>
+<div class="container py-5">
 
-    <!-- Summary Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-white bg-primary">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Sessions</h5>
-                    <h2>{{ stats.total_sessions if stats else 0 }}</h2>
+    <!-- Dashboard Header -->
+    <div class="dashboard-header mb-5">
+        <h1 class="mb-2">Analytics Dashboard</h1>
+        <p class="text-muted">Real-time insights into search behavior and user engagement</p>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="row mb-5">
+        <div class="col-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
                 </div>
+                <div class="stat-value">{{ stats.total_sessions }}</div>
+                <div class="stat-label">Total Sessions</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-success">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Queries</h5>
-                    <h2>{{ stats.total_queries if stats else 0 }}</h2>
+        <div class="col-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="M21 21l-4.35-4.35"></path>
+                    </svg>
                 </div>
+                <div class="stat-value">{{ stats.total_queries }}</div>
+                <div class="stat-label">Total Searches</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-info">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Clicks</h5>
-                    <h2>{{ stats.total_clicks if stats else 0 }}</h2>
+        <div class="col-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
                 </div>
+                <div class="stat-value">{{ stats.total_clicks }}</div>
+                <div class="stat-label">Total Clicks</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-white bg-warning">
-                <div class="card-body text-center">
-                    <h5 class="card-title">Unique Docs</h5>
-                    <h2>{{ stats.unique_docs_clicked if stats else 0 }}</h2>
+        <div class="col-6 col-lg-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
                 </div>
+                <div class="stat-value">{{ stats.unique_docs_clicked }}</div>
+                <div class="stat-label">Unique Products Viewed</div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Most Viewed Documents</strong>
-                </div>
-                <div class="card-body">
-                    <iframe src="/plot_number_of_views" width="100%" height="300" style="border: none;"></iframe>
+    <div class="row mb-5">
+        <!-- Top Queries Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <h5 class="chart-title">Top Search Queries</h5>
+                <div class="chart-container">
+                    <iframe src="/plot_top_queries" frameborder="0" class="chart-iframe"></iframe>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Top Search Queries</strong>
-                </div>
-                <div class="card-body">
-                    <iframe src="/plot_top_queries" width="100%" height="300" style="border: none;"></iframe>
+
+        <!-- Document Views Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-card">
+                <h5 class="chart-title">Most Viewed Products</h5>
+                <div class="chart-container">
+                    <iframe src="/plot_number_of_views" frameborder="0" class="chart-iframe"></iframe>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Algorithm Usage</strong>
-                </div>
-                <div class="card-body">
-                    <iframe src="/plot_algorithm_distribution" width="100%" height="300" style="border: none;"></iframe>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Top Queries (Table)</strong>
-                </div>
-                <div class="card-body">
-                    {% if top_queries %}
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Query</th>
-                                    <th>Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for q in top_queries %}
-                                <tr>
-                                    <td>{{ q.query }}</td>
-                                    <td><span class="badge badge-primary">{{ q.count }}</span></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p class="text-muted">No queries recorded yet.</p>
-                    {% endif %}
+    <!-- Second Row: Algorithm Distribution + Tables -->
+    <div class="row mb-5">
+        <!-- Algorithm Distribution Chart -->
+        <div class="col-lg-4 mb-4">
+            <div class="chart-card">
+                <h5 class="chart-title">Algorithm Usage</h5>
+                <div class="chart-container">
+                    <iframe src="/plot_algorithm_distribution" frameborder="0" class="chart-iframe"></iframe>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Algorithm Distribution Table -->
-    {% if algo_dist %}
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <strong>Algorithm Distribution (Table)</strong>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
+        <!-- Top Queries Table -->
+        <div class="col-lg-4 mb-4">
+            <div class="table-card">
+                <h5 class="table-title">Popular Queries</h5>
+                {% if top_queries %}
+                <div class="table-responsive">
+                    <table class="table table-sm custom-table">
                         <thead>
                             <tr>
-                                <th>Algorithm</th>
-                                <th>Usage Count</th>
+                                <th>Query</th>
+                                <th class="text-right">Count</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for algo, count in algo_dist.items() %}
+                            {% for q in top_queries %}
                             <tr>
-                                <td>{{ algo|upper }}</td>
-                                <td><span class="badge badge-info">{{ count }}</span></td>
+                                <td class="query-text">{{ q.query }}</td>
+                                <td class="text-right">
+                                    <span class="count-badge">{{ q.count }}</span>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>No queries recorded yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Algorithm Distribution Table -->
+        <div class="col-lg-4 mb-4">
+            <div class="table-card">
+                <h5 class="table-title">Algorithm Breakdown</h5>
+                {% if algo_dist %}
+                <div class="table-responsive">
+                    <table class="table table-sm custom-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th class="text-right">Usage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for algo, count in algo_dist.items() %}
+                            <tr>
+                                <td>
+                                    <span class="algo-name">{{ algo|upper }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <span class="count-badge algo-{{ algo }}">{{ count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <p>No algorithm data yet.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- Navigation -->
-    <div class="mt-4">
-        <a href="/" class="btn btn-outline-primary">Home</a>
-        <a href="/stats" class="btn btn-outline-secondary">Simple Stats</a>
+    <div class="dashboard-nav mt-5 pt-4 border-top">
+        <a href="/" class="btn btn-dark">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mr-2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Home
+        </a>
+        <a href="/stats" class="btn btn-outline-dark ml-2">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mr-2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>
+            Simple Stats
+        </a>
     </div>
 
+</div>
+
+<style>
+/* Dashboard Header */
+.dashboard-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Stat Cards */
+.stat-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    color: #6c757d;
+    margin-bottom: 1rem;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #000 0%, #333 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.7rem;
+}
+
+/* Chart Cards */
+.chart-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    height: 100%;
+}
+
+.chart-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.chart-container {
+    width: 100%;
+    min-height: 300px;
+}
+
+.chart-iframe {
+    width: 100%;
+    height: 300px;
+    border: none;
+}
+
+/* Table Cards */
+.table-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    height: 100%;
+}
+
+.table-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.custom-table {
+    margin-bottom: 0;
+}
+
+.custom-table thead th {
+    border-top: none;
+    border-bottom: 2px solid #e9ecef;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.custom-table tbody td {
+    vertical-align: middle;
+    padding: 0.75rem 0.5rem;
+    border-color: #f1f3f4;
+}
+
+.query-text {
+    font-weight: 500;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.count-badge {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.algo-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.count-badge.algo-tfidf { background: #4CAF50; }
+.count-badge.algo-bm25 { background: #2196F3; }
+.count-badge.algo-custom { background: #FF9800; }
+.count-badge.algo-word2vec { background: #9C27B0; }
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+/* Navigation */
+.dashboard-nav {
+    display: flex;
+    gap: 10px;
+}
+
+.dashboard-nav .btn {
+    display: inline-flex;
+    align-items: center;
+}
+
+.dashboard-nav .btn svg {
+    margin-right: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.75rem;
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+    }
+
+    .chart-container {
+        min-height: 250px;
+    }
+
+    .chart-iframe {
+        height: 250px;
+    }
+}
+</style>
 {% endblock %}

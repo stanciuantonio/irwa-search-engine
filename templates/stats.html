@@ -1,15 +1,249 @@
 {% extends "base.html" %}
-{% block page_title %}{{ page_title }}{% endblock %}
-{% block content %}
-    <h2>Quick Stats</h2>
-    <h4>Clicked docs:</h4>
+{% block page_title %}Quick Stats{% endblock %}
 
-    {% for doc in clicks_data %}
-        <div class="pb-3">
-            <div class="">
-                <span class="text-dark"> ({{ doc.count }} visits) </span> — id: {{ doc.pid }} — {{ doc.title }} - {{ doc.description }}
+{% block content %}
+<div class="container py-5">
+
+    <!-- Header -->
+    <div class="stats-header mb-5">
+        <h1 class="mb-2">Quick Stats</h1>
+        <p class="text-muted">Most clicked products by users</p>
+    </div>
+
+    {% if clicks_data %}
+    <!-- Stats Grid -->
+    <div class="row">
+        {% for doc in clicks_data %}
+        <div class="col-12 mb-3">
+            <div class="stats-item">
+                <div class="stats-rank">
+                    <span class="rank-number">#{{ loop.index }}</span>
+                </div>
+                <div class="stats-content">
+                    <div class="stats-main">
+                        <a href="{{ doc.url }}" class="stats-title">{{ doc.title }}</a>
+                        <p class="stats-description">{{ doc.description[:150] if doc.description else 'No description available' }}{% if doc.description and doc.description|length > 150 %}...{% endif %}</p>
+                        <span class="stats-pid">ID: {{ doc.pid }}</span>
+                    </div>
+                    <div class="stats-count">
+                        <div class="count-value">{{ doc.count }}</div>
+                        <div class="count-label">{{ 'click' if doc.count == 1 else 'clicks' }}</div>
+                    </div>
+                </div>
             </div>
         </div>
-        <hr>
-    {% endfor %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state-container">
+        <div class="empty-state">
+            <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <h4>No Clicks Yet</h4>
+            <p>Start searching and clicking on products to see statistics here.</p>
+            <a href="/" class="btn btn-dark mt-3">Start Searching</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div class="stats-nav mt-5 pt-4 border-top">
+        <a href="/" class="btn btn-dark">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mr-2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            Home
+        </a>
+        <a href="/dashboard" class="btn btn-outline-dark ml-2">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mr-2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            Full Dashboard
+        </a>
+    </div>
+
+</div>
+
+<style>
+/* Header */
+.stats-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Stats Item */
+.stats-item {
+    display: flex;
+    align-items: stretch;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.stats-rank {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #000 0%, #333 100%);
+    color: #fff;
+    min-width: 60px;
+    padding: 1rem;
+}
+
+.rank-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.stats-content {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    gap: 1rem;
+}
+
+.stats-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.stats-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #000;
+    text-decoration: none;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stats-title:hover {
+    color: #333;
+    text-decoration: underline;
+}
+
+.stats-description {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.stats-pid {
+    font-size: 0.7rem;
+    color: #adb5bd;
+    font-family: monospace;
+}
+
+.stats-count {
+    text-align: center;
+    min-width: 80px;
+}
+
+.count-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #000;
+    line-height: 1;
+}
+
+.count-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+/* Empty State */
+.empty-state-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 16px;
+    max-width: 400px;
+}
+
+.empty-state svg {
+    color: #adb5bd;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h4 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Navigation */
+.stats-nav {
+    display: flex;
+    gap: 10px;
+}
+
+.stats-nav .btn {
+    display: inline-flex;
+    align-items: center;
+}
+
+.stats-nav .btn svg {
+    margin-right: 8px;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .stats-item {
+        flex-direction: column;
+    }
+
+    .stats-rank {
+        min-width: 100%;
+        padding: 0.75rem;
+    }
+
+    .stats-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stats-count {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+        width: 100%;
+    }
+}
+</style>
 {% endblock %}
